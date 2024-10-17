@@ -1,0 +1,87 @@
+import sys
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QFileDialog, QVBoxLayout, QWidget, QLabel, QSlider
+from PyQt6.QtMultimedia import QMediaPlayer, QVideoWidget
+from PyQt6.QtCore import Qt, QUrl
+
+class VideoPlayer(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Минималистичный видеоплеер")
+        self.setGeometry(100, 100, 800, 600)
+
+        # Инициализация медиа плеера
+        self.media_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+
+        # Виджет для видео
+        self.video_widget = QVideoWidget()
+        self.media_player.setVideoOutput(self.video_widget)
+
+        # Кнопки
+        self.play_button = QPushButton("Играть / Пауза")
+        self.play_button.clicked.connect(self.toggle_play)
+
+        self.file_button = QPushButton("Выбрать файл")
+        self.file_button.clicked.connect(self.open_file)
+
+        # Метка для отображения пути
+        self.file_label = QLabel("Файл не выбран")
+
+        # Слайдер
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.sliderMoved.connect(self.set_position)
+
+        # Метки для времени
+        self.current_time_label = QLabel("00:00")
+        self.duration_label = QLabel("00:00")
+
+        # Установка компоновки
+        layout = QVBoxLayout()
+        layout.addWidget(self.video_widget)
+        layout.addWidget(self.play_button)
+        layout.addWidget(self.file_button)
+        layout.addWidget(self.file_label)
+        layout.addWidget(self.current_time_label)
+        layout.addWidget(self.duration_label)
+        layout.addWidget(self.slider)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+        # Связываем изменение времени слайдера с медиа плеером
+        self.media_player.positionChanged.connect(self.update_slider)
+        self.media_player.durationChanged.connect(self.update_duration)
+
+    def open_file(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Выбрать видео файл", "", "Video Files (*.mp4 *.avi *.mov *.mkv)")
+        if file_name:
+            self.media_player.setSource(QUrl.fromLocalFile(file_name))
+            self.file_label.setText(file_name)
+
+    def toggle_play(self):
+        if self.media_player.state() == QMediaPlayer.State.Playing:
+            self.media_player.pause()
+        else:
+            self.media_player.play()
+
+    def set_position(self, position):
+        self.media_player.setPosition(position)
+
+    def update_slider(self, position):
+        self.slider.setValue(position)
+        self.current_time_label.setText(self.format_time(position))
+
+    def update_duration(self, duration):
+        self.slider.setRange(0, duration)
+        self.duration_label.setText(self.format_time(duration))
+
+    def format_time(self, ms):
+        seconds = (ms // 1000) % 60
+        minutes = (ms // (1000 * 60)) % 60
+        return f"{minutes:02}:{seconds:02}"
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    player = VideoPlayer()
+    player.show()
+    sys.exit(app.exec())
